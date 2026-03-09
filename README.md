@@ -1,7 +1,6 @@
 # rbfmvar: Residual-Based Fully Modified Vector Autoregression
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/merwanroudane/rbfmvar/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/merwanroudane/rbfmvar/actions/workflows/R-CMD-check.yaml)
 [![CRAN status](https://www.r-pkg.org/badges/version/rbfmvar)](https://CRAN.R-project.org/package=rbfmvar)
 <!-- badges: end -->
 
@@ -37,7 +36,6 @@ Or install the development version from GitHub:
 
 ```r
 # install.packages("devtools")
-devtools::install_github("merwanroudane/rbfmvar")
 ```
 
 ## Usage
@@ -133,4 +131,3 @@ GPL (>= 3)
 
 ## Author
 
-Merwan Roudane (merwanroudane920@gmail.com)
