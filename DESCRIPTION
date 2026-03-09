@@ -24,6 +24,8 @@ Description: Implements the Residual-Based Fully Modified Vector Autoregression
     functions (IRF) with bootstrap confidence intervals, forecast error variance
     decomposition (FEVD), and out-of-sample forecasting.
 License: GPL-3
+URL: https://github.com/muhammedalkhalaf/rbfmvar
+BugReports: https://github.com/muhammedalkhalaf/rbfmvar/issues
 Encoding: UTF-8
 Depends: R (>= 3.5.0)
 Imports:

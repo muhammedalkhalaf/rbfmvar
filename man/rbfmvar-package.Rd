@@ -68,8 +68,8 @@ Covariance Matrix Estimation. \emph{Econometrica}, 59(3), 817-858.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/merwanroudane/rbfmvar}
-  \item Report bugs at \url{https://github.com/merwanroudane/rbfmvar/issues}
+  \item \url{https://github.com/muhammedalkhalaf/rbfmvar}
+  \item Report bugs at \url{https://github.com/muhammedalkhalaf/rbfmvar/issues}
 }
 
 }
