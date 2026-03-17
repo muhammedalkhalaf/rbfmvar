@@ -1,0 +1,27 @@
+Package: rbfmvar
+Type: Package
+Title: Residual-Based Fully Modified VAR Estimation
+Version: 1.0.0
+Authors@R: person("Muhammad", "Alkhalaf", email = "muhammedalkhalaf@gmail.com",
+    role = c("aut", "cre", "cph"),
+    comment = c(ORCID = "0009-0002-2677-9246"))
+Description: Implements the Residual-Based Fully Modified VAR (RBFM-VAR)
+    estimator of Chang (2000) <doi:10.1017/S0266466600166017> for vector
+    autoregressive models that may contain an unknown mixture of I(0), I(1),
+    and I(2) components. The procedure extends the Phillips (1995) FM-VAR by
+    applying a nonparametric long-run variance correction to the OLS residuals,
+    enabling valid inference without prior knowledge of the integration orders.
+    Supports lag selection by AIC, BIC, and Hannan-Quinn criteria, modified
+    Wald Granger non-causality tests, and impulse response functions.
+Author: Muhammad Alkhalaf [aut, cre, cph]
+    (<https://orcid.org/0009-0002-2677-9246>)
+Maintainer: Muhammad Alkhalaf <muhammedalkhalaf@gmail.com>
+License: GPL-3
+Encoding: UTF-8
+RoxygenNote: 7.3.2
+Depends: R (>= 3.5.0)
+Imports: stats
+Suggests: testthat (>= 3.0.0)
+Config/testthat/edition: 3
+URL: https://github.com/muhammedalkhalaf/rbfmvar
+BugReports: https://github.com/muhammedalkhalaf/rbfmvar/issues
