@@ -1,0 +1,14 @@
+﻿citHeader("To cite rbfmvar in publications use:")
+
+bibentry(
+  bibtype  = "Manual",
+  title    = "Residual-Based Fully Modified Vector Autoregression",
+  author   = person("Muhammad Abdullah", "Alkhalaf",
+               email = "muhammedalkhalaf@gmail.com",
+               role  = c("aut", "cre"),
+               comment = c(ORCID = "0009-0002-2677-9246")),
+  year     = "2026",
+  note     = "R package version 2.0.2",
+  url      = "https://CRAN.R-project.org/package=rbfmvar",
+  doi      = "10.32614/CRAN.package.rbfmvar"
+)
