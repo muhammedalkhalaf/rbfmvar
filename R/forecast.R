@@ -6,6 +6,10 @@
 #' @param object A model object.
 #' @param ... Additional arguments passed to methods.
 #'
+#' @return Depends on the method dispatched. See \code{\link{forecast.rbfmvar}}
+#'   for the RBFM-VAR method, which returns an object of class
+#'   \code{"rbfmvar_forecast"}.
+#'
 #' @export
 forecast <- function(object, ...) {
 
@@ -135,6 +139,11 @@ forecast.rbfmvar <- function(object, h = 10, level = 95, ...) {
   result
 }
 
+#' @title Print Method for rbfmvar_forecast Objects
+#' @description Prints a summary of an RBFM-VAR forecast.
+#' @param x An \code{rbfmvar_forecast} object.
+#' @param ... Additional arguments (currently ignored).
+#' @return Invisibly returns \code{x}.
 #' @export
 print.rbfmvar_forecast <- function(x, ...) {
   cat("\nRBFM-VAR Forecast\n")
@@ -151,6 +160,11 @@ print.rbfmvar_forecast <- function(x, ...) {
   invisible(x)
 }
 
+#' @title Plot Method for rbfmvar_forecast Objects
+#' @description Plots forecasts from an RBFM-VAR model.
+#' @param x An \code{rbfmvar_forecast} object.
+#' @param ... Additional arguments passed to \code{plot}.
+#' @return No return value, called for side effects (produces a plot).
 #' @export
 plot.rbfmvar_forecast <- function(x, ...) {
   n <- length(x$varnames)

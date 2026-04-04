@@ -1,7 +1,7 @@
 Package: rbfmvar
 Type: Package
 Title: Residual-Based Fully Modified Vector Autoregression
-Version: 2.0.0
+Version: 2.0.2
 Authors@R: c(
     person("Muhammad", "Alkhalaf", 
            email = "muhammedalkhalaf@gmail.com",

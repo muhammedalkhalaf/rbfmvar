@@ -1,0 +1,137 @@
+\section{Summary}\label{summary}
+
+\texttt{rbfmvar} implements the Residual-Based Fully Modified Vector
+Autoregression (RBFM-VAR) estimator of Chang (2000). The RBFM-VAR
+procedure extends the Phillips (1995) FM-VAR approach to handle any
+unknown mixture of I(0), I(1), and I(2) components without requiring
+prior knowledge of the number or location of unit roots. This robustness
+is achieved by applying a fully modified correction to VAR residuals
+rather than to levels, yielding asymptotically chi-squared Wald
+statistics for Granger non-causality tests regardless of integration
+order. The package provides automatic lag selection via information
+criteria (AIC, BIC, HQ), long-run variance estimation using Bartlett,
+Parzen, or Quadratic Spectral kernels with Andrews (1991) automatic
+bandwidth selection, impulse response functions (IRF) with bootstrap
+confidence intervals, forecast error variance decomposition (FEVD), and
+out-of-sample forecasting.
+
+\section{Statement of Need}\label{statement-of-need}
+
+Standard VAR inference breaks down when the system contains integrated
+or cointegrated variables: OLS Wald statistics for Granger causality
+tests have non-standard distributions, and pre-tests for integration
+order are required before inference. The Toda-Yamamoto (1995) approach
+augments the VAR lag length but requires knowledge of the maximum
+integration order. The RBFM-VAR of Chang (2000) sidesteps both issues by
+correcting for serial correlation and endogeneity in the residuals,
+producing standard chi-squared inference without pre-testing. While
+RBFM-VAR implementations exist in GAUSS and EViews, no R package has
+provided this estimator. \texttt{rbfmvar} fills this gap, enabling
+robust causal inference in multivariate time series with mixed
+integration orders entirely within R.
+
+\section{Usage}\label{usage}
+
+\subsection{Fitting the RBFM-VAR
+Model}\label{fitting-the-rbfm-var-model}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(rbfmvar)}
+
+\CommentTok{\# Fit RBFM{-}VAR with automatic lag selection}
+\NormalTok{fit }\OtherTok{\textless{}{-}} \FunctionTok{rbfmvar}\NormalTok{(}\AttributeTok{data =}\NormalTok{ macro\_ts, }\AttributeTok{lag\_max =} \DecValTok{4}\NormalTok{, }\AttributeTok{ic =} \StringTok{"BIC"}\NormalTok{,}
+               \AttributeTok{kernel =} \StringTok{"Bartlett"}\NormalTok{)}
+\FunctionTok{summary}\NormalTok{(fit)}
+\FunctionTok{print}\NormalTok{(fit)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Granger Non-Causality
+Tests}\label{granger-non-causality-tests}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Wald test: does x Granger{-}cause y? (asymptotic chi{-}squared)}
+\NormalTok{gc\_result }\OtherTok{\textless{}{-}} \FunctionTok{granger}\NormalTok{(fit, }\AttributeTok{cause =} \StringTok{"x"}\NormalTok{, }\AttributeTok{effect =} \StringTok{"y"}\NormalTok{)}
+\FunctionTok{print}\NormalTok{(gc\_result)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Impulse Response
+Functions}\label{impulse-response-functions}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# IRF with bootstrap confidence intervals}
+\NormalTok{irf\_result }\OtherTok{\textless{}{-}} \FunctionTok{irf}\NormalTok{(fit, }\AttributeTok{impulse =} \StringTok{"x"}\NormalTok{, }\AttributeTok{response =} \StringTok{"y"}\NormalTok{,}
+                  \AttributeTok{h =} \DecValTok{20}\NormalTok{, }\AttributeTok{nboot =} \DecValTok{1000}\NormalTok{, }\AttributeTok{ci =} \FloatTok{0.95}\NormalTok{)}
+\FunctionTok{plot}\NormalTok{(irf\_result)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Forecast Error Variance
+Decomposition}\label{forecast-error-variance-decomposition}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fevd\_result }\OtherTok{\textless{}{-}} \FunctionTok{fevd}\NormalTok{(fit, }\AttributeTok{h =} \DecValTok{20}\NormalTok{)}
+\FunctionTok{print}\NormalTok{(fevd\_result)}
+\FunctionTok{plot}\NormalTok{(fevd\_result)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Out-of-Sample Forecasting}\label{out-of-sample-forecasting}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fc }\OtherTok{\textless{}{-}} \FunctionTok{forecast}\NormalTok{(fit, }\AttributeTok{h =} \DecValTok{8}\NormalTok{)}
+\FunctionTok{print}\NormalTok{(fc)}
+\end{Highlighting}
+\end{Shaded}
+
+\section{Implementation}\label{implementation}
+
+\texttt{rbfmvar} is implemented in R with a dependency on \texttt{MASS}
+for matrix operations. Lag selection in \texttt{lag\_selection()}
+evaluates AIC, BIC, and Hannan-Quinn criteria over a grid of candidate
+orders. Long-run variance estimation in \texttt{lrv()} uses the
+\texttt{kernels()} module which implements Bartlett, Parzen, and
+Quadratic Spectral kernels with Andrews (1991) data-driven bandwidth.
+The core \texttt{rbfmvar()} function estimates the VAR by OLS, extracts
+residuals, applies the FM correction following Chang (2000), and
+constructs the RBFM coefficient matrix. Granger causality Wald
+statistics in \texttt{granger()} are asymptotically chi-squared under
+the null regardless of integration order. IRFs are computed via the
+moving-average representation and bootstrapped using a residual
+bootstrap with 1000 replications by default. FEVD decomposition in
+\texttt{fevd()} uses the Cholesky factorisation of the residual
+covariance matrix.
+
+\section*{References}\label{references}
+\addcontentsline{toc}{section}{References}
+
+\protect\phantomsection\label{refs}
+\begin{CSLReferences}{1}{1}
+\bibitem[\citeproctext]{ref-Andrews1991}
+Andrews, Donald W. K. 1991. {``Heteroskedasticity and Autocorrelation
+Consistent Covariance Matrix Estimation.''} \emph{Econometrica} 59 (3):
+817--58. \url{https://doi.org/10.2307/2938229}.
+
+\bibitem[\citeproctext]{ref-Chang2000}
+Chang, Yoosoon. 2000. {``Bootstrap Unit Root Tests in Models with
+{GARCH} Innovations.''} \emph{Econometric Theory} 16 (6): 787--818.
+\url{https://doi.org/10.1017/S0266466600166071}.
+
+\bibitem[\citeproctext]{ref-Phillips1995}
+Phillips, Peter C. B. 1995. {``Fully Modified Least Squares and Vector
+Autoregression.''} \emph{Econometrica} 63 (5): 1023--78.
+\url{https://doi.org/10.2307/2171721}.
+
+\bibitem[\citeproctext]{ref-TodaYamamoto1995}
+Toda, Hiro Y., and Taku Yamamoto. 1995. {``Statistical Inference in
+Vector Autoregressions with Possibly Integrated Processes.''}
+\emph{Journal of Econometrics} 66 (1-2): 225--50.
+\url{https://doi.org/10.1016/0304-4076(94)01616-8}.
+
+\end{CSLReferences}

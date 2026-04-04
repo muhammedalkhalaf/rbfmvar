@@ -11,6 +11,11 @@ forecast(object, ...)
 
 \item{...}{Additional arguments passed to methods.}
 }
+\value{
+Depends on the method dispatched. See \code{\link{forecast.rbfmvar}}
+  for the RBFM-VAR method, which returns an object of class
+  \code{"rbfmvar_forecast"}.
+}
 \description{
 The generic function \code{forecast} computes forecasts from time series models.
 }

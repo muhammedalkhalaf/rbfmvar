@@ -94,6 +94,12 @@ summary.rbfmvar <- function(object, ...) {
   result
 }
 
+#' @title Print Method for summary.rbfmvar Objects
+#' @description Prints detailed coefficient tables and diagnostics for an RBFM-VAR model summary.
+#' @param x A \code{summary.rbfmvar} object.
+#' @param digits Integer. Number of digits to print. Default is 4.
+#' @param ... Additional arguments (currently ignored).
+#' @return Invisibly returns \code{x}.
 #' @export
 print.summary.rbfmvar <- function(x, digits = 4, ...) {
   cat("\n")
