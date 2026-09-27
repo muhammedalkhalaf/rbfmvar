@@ -7,7 +7,7 @@
 ## Overview
 
 **rbfmvar** implements the Residual-Based Fully Modified Vector Autoregression
-(RBFM-VAR) estimator following [Chang (2000)](https://doi.org/10.1017/S0266466600166071).
+(RBFM-VAR) estimator following [Chang (2000)](https://doi.org/10.1017/S0266466600166058).
 The RBFM-VAR procedure extends Phillips (1995) FM-VAR to handle any unknown
 mixture of I(0), I(1), and I(2) components without prior knowledge of the
 number or location of unit roots.
@@ -115,7 +115,7 @@ regression errors and innovations in integrated regressors, achieving:
 
 - Chang, Y. (2000). Vector Autoregressions with Unknown Mixtures of I(0), I(1),
   and I(2) Components. *Econometric Theory*, 16(6), 905-926.
-  [doi:10.1017/S0266466600166071](https://doi.org/10.1017/S0266466600166071)
+  [doi:10.1017/S0266466600166058](https://doi.org/10.1017/S0266466600166058)
 
 - Phillips, P. C. B. (1995). Fully Modified Least Squares and Vector
   Autoregression. *Econometrica*, 63(5), 1023-1078.

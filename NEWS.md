@@ -41,4 +41,4 @@
 
 Chang, Y. (2000). Vector Autoregressions with Unknown Mixtures of I(0), I(1),
 and I(2) Components. *Econometric Theory*, 16(6), 905-926.
-doi:10.1017/S0266466600166071
+doi:10.1017/S0266466600166058

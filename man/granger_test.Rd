@@ -67,7 +67,7 @@ print(test2)
 \references{
 Chang, Y. (2000). Vector Autoregressions with Unknown Mixtures of I(0), I(1),
 and I(2) Components. \emph{Econometric Theory}, 16(6), 905-926.
-\doi{10.1017/S0266466600166071}
+\doi{10.1017/S0266466600166058}
 
 Toda, H. Y., & Yamamoto, T. (1995). Statistical Inference in Vector
 Autoregressions with Possibly Integrated Processes. \emph{Journal of
