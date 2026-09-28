@@ -1,3 +1,7 @@
+# rbfmvar 2.0.3
+
+* Corrected the DOI of Chang (2000), Econometric Theory 16(6), to 10.1017/S0266466600166058 (all occurrences). No changes to code.
+
 # rbfmvar 2.0.0
 
 ## Initial Release
