@@ -32,12 +32,12 @@ An object of class \code{"rbfmvar_forecast"} containing:
 Generates out-of-sample forecasts from an RBFM-VAR model.
 }
 \details{
-Forecasts are generated iteratively using the estimated VAR coefficients.
-Standard errors are computed assuming normally distributed innovations.
-
-Note that since the RBFM-VAR is estimated on second differences, forecasts
-are for \eqn{\Delta^2 y_{t+h}}, which need to be accumulated to obtain
-level forecasts.
+Forecasts of the levels \eqn{y_{T+s}} are generated iteratively from the
+levels VAR implied by the RBFM-VAR coefficients, starting from the last
+observations of the data. The forecast error variance at horizon s is
+\eqn{\sum_{i=0}^{s-1}\Psi_i\Sigma_e\Psi_i'} with \eqn{\Psi_i} the moving
+average coefficients; prediction intervals assume normal innovations and
+ignore parameter estimation uncertainty.
 }
 \examples{
 # Simulate VAR data

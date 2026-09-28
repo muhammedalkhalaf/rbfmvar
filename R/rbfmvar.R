@@ -28,6 +28,13 @@
 #'
 #' where \eqn{\Delta} is the difference operator and \eqn{\Delta^2 = \Delta \circ \Delta}.
 #'
+#' The coefficients are estimated by the RBFM-VAR procedure of Chang (2000,
+#' equations 10 to 13); see the internal function \code{rbfmvar_estimate}
+#' for the formulas. The automatic bandwidth applies Andrews (1991) to the
+#' series \eqn{\hat v_t}; the correction depends on the bandwidth in finite
+#' samples, and Chang (2000) does not state the kernel or bandwidth used in
+#' its simulations.
+#'
 #' The FM+ correction eliminates the second-order asymptotic bias that arises
 
 #' from the correlation between the regression errors and the innovations in
@@ -49,6 +56,9 @@
 #'   \item{Sigma_e}{Residual covariance matrix.}
 #'   \item{Omega_ev, Omega_vv}{Long-run variance components.}
 #'   \item{Delta_vdw}{One-sided long-run covariance for FM correction.}
+#'   \item{N_hat}{OLS coefficient of \eqn{\Delta y_{t-1}} on \eqn{\Delta y_{t-2}} used in \eqn{\hat v_t}.}
+#'   \item{XtX_inv}{\eqn{(X'X)^{-1}} of the regressors, used by \code{granger_test}.}
+#'   \item{data}{The data matrix, used by \code{irf}, \code{forecast} and \code{ic_table}.}
 #'   \item{residuals}{Matrix of residuals from FM+ estimation.}
 #'   \item{fitted}{Matrix of fitted values.}
 #'   \item{nobs}{Number of observations in original data.}
@@ -176,12 +186,36 @@ rbfmvar <- function(data, lags = 2, max_lags = 8, ic = "none",
   result$level <- level
   result$varnames <- varnames
   result$call <- cl
+  result$data <- data
 
   class(result) <- "rbfmvar"
   result
 }
 
 #' Core RBFM-VAR Estimation
+#'
+#' Implements the RBFM-VAR estimator of Chang (2000), equations (10) to
+#' (13). The regression is written in the second-difference form of
+#' equation (2); since \eqn{y_t = \Delta^2 y_t + \Delta y_{t-1} + y_{t-1}},
+#' the dependent variables of (2) and (3) differ by a linear function of
+#' \eqn{w_t}, and the corrected estimates of the two forms differ only by
+#' the identity added to \eqn{\Pi_1} and \eqn{\Pi_2}.
+#'
+#' With \eqn{z_t = (\Delta^2 y_{t-1}', \dots, \Delta^2 y_{t-p+2}')'} and
+#' \eqn{w_t = (\Delta y_{t-1}', y_{t-1}')'},
+#' \deqn{\hat F^+ = (Y'Z, Y^{+\prime}W + T\hat\Delta^+)(X'X)^{-1},}
+#' \eqn{Y^{+\prime} = Y' - \hat\Omega_{\hat\varepsilon\hat v}
+#' \hat\Omega_{\hat v\hat v}^{-1}\hat V'} and \eqn{\hat\Delta^+ =
+#' \hat\Omega_{\hat\varepsilon\hat v}\hat\Omega_{\hat v\hat v}^{-1}
+#' \hat\Delta_{\hat v\Delta w}}, where \eqn{\hat\varepsilon_t} are the OLS
+#' residuals, \eqn{\hat v_t = (\Delta^2 y_{t-1}', \Delta y_{t-1}' - \hat
+#' N\Delta y_{t-2}')'} (equation 11) with \eqn{\hat N} the OLS coefficient of
+#' \eqn{\Delta y_{t-1}} on \eqn{\Delta y_{t-2}}, \eqn{\Delta w_t =
+#' (\Delta^2 y_{t-1}', \Delta y_{t-1}')'}, \eqn{\hat\Omega} are two-sided
+#' kernel long-run covariance estimates and \eqn{\hat\Delta_{\hat v\Delta
+#' w} = \sum_{j \ge 0} k(j/K) T^{-1}\sum_t \hat v_{t+j}\Delta w_t'} is the
+#' one-sided long-run covariance (Chang, 2000, p. 909:
+#' \eqn{\Delta = \sum_{j\ge0} E u_j u_0'}).
 #'
 #' @param Y Data matrix (T x n).
 #' @param p Lag order.
@@ -195,165 +229,82 @@ rbfmvar_estimate <- function(Y, p, kernel, bandwidth) {
   TT <- nrow(Y)
   n <- ncol(Y)
 
-  # Compute differences
-  dY <- diff(Y)          # Delta Y (T-1 x n)
-  d2Y <- diff(dY)        # Delta^2 Y (T-2 x n)
+  # Series indexed by original time t = 1..TT (NA where undefined)
+  dY <- rbind(NA, diff(Y))
+  d2Y <- rbind(NA, diff(dY))
+  lagm <- function(M, j) {
+    if (j == 0) return(M)
+    rbind(matrix(NA_real_, j, ncol(M)), M[seq_len(nrow(M) - j), , drop = FALSE])
+  }
 
-  # Build regressor matrix Z
-  # Structure: [Delta^2 Y_{t-1}, ..., Delta^2 Y_{t-p+2}, Delta Y_{t-1}, Y_{t-1}]
-  # We need observations from t = p+1 to T (in original indexing)
-
-  # Effective sample: after losing observations to differencing and lags
-  # For p lags, we need p+2 initial observations (2 for second difference, p for lags)
-  T_eff <- TT - max(p, 2) - 1
-
+  # Estimation sample: the VAR(p) in levels needs y_{t-p}; v_t needs
+  # Delta y_{t-2}, hence t >= 4
+  t0 <- max(p + 1, 4)
+  rows <- t0:TT
+  T_eff <- length(rows)
   if (T_eff < 10) {
     stop("Effective sample size too small (T_eff = ", T_eff, ").")
   }
 
-  # Dependent variable: Delta^2 Y_t
-  # We use the last T_eff observations of d2Y
-  y_dep <- d2Y[(nrow(d2Y) - T_eff + 1):nrow(d2Y), , drop = FALSE]
+  y_dep <- d2Y[rows, , drop = FALSE]
+  Zs <- if (p >= 3) {
+    do.call(cbind, lapply(1:(p - 2), function(j) lagm(d2Y, j)[rows, , drop = FALSE]))
+  } else matrix(0, T_eff, 0)
+  W <- cbind(lagm(dY, 1)[rows, , drop = FALSE], lagm(Y, 1)[rows, , drop = FALSE])
+  Z <- cbind(Zs, W)   # full regressor matrix X = (Z, W) of Chang (2000)
 
-  # Build Z matrix
-  Z_list <- list()
-
-  # Gamma regressors: Delta^2 Y_{t-j} for j = 1, ..., p-2
-  if (p >= 3) {
-    for (j in 1:(p - 2)) {
-      # Delta^2 Y_{t-j}: shift by j rows
-      start_idx <- nrow(d2Y) - T_eff + 1 - j
-      end_idx <- nrow(d2Y) - j
-      Z_list[[length(Z_list) + 1]] <- d2Y[start_idx:end_idx, , drop = FALSE]
-    }
-  }
-
-  # Pi1 regressors: Delta Y_{t-1}
-  # Aligned with y_dep but lagged by 1 in dY indexing
-  start_idx_dY <- nrow(dY) - T_eff
-  end_idx_dY <- nrow(dY) - 1
-  Z_list[[length(Z_list) + 1]] <- dY[start_idx_dY:end_idx_dY, , drop = FALSE]
-
-  # Pi2 regressors: Y_{t-1}
-  # Aligned with y_dep but lagged by 1 in Y indexing
-  start_idx_Y <- TT - T_eff
-  end_idx_Y <- TT - 1
-  Z_list[[length(Z_list) + 1]] <- Y[start_idx_Y:end_idx_Y, , drop = FALSE]
-
-  # Combine into Z matrix
-  Z <- do.call(cbind, Z_list)
-
-  # Number of regressors
-  n_gamma <- n * max(p - 2, 0)
-  n_pi1 <- n
-  n_pi2 <- n
+  n_gamma <- ncol(Zs)
   n_regs <- ncol(Z)
 
   # =========================================================================
-  # OLS Estimation
+  # OLS-VAR
   # =========================================================================
   ZtZ <- crossprod(Z)
-  ZtZ_inv <- tryCatch(
-    solve(ZtZ),
-    error = function(e) MASS::ginv(ZtZ)
-  )
-  Zty <- crossprod(Z, y_dep)
-
-  # F_ols: (n_regs x n) coefficient matrix, transposed form
-  F_ols <- ZtZ_inv %*% Zty
-
-  # Residuals
+  ZtZ_inv <- tryCatch(solve(ZtZ), error = function(e) MASS::ginv(ZtZ))
+  F_ols <- ZtZ_inv %*% crossprod(Z, y_dep)          # (n_regs x n)
   e_ols <- y_dep - Z %*% F_ols
   Sigma_e <- crossprod(e_ols) / T_eff
 
   # =========================================================================
-  # Long-Run Variance Estimation
+  # v_hat (equation 11) and Delta w
   # =========================================================================
+  dY1 <- lagm(dY, 1)[rows, , drop = FALSE]
+  dY2 <- lagm(dY, 2)[rows, , drop = FALSE]
+  N_hat <- t(solve(crossprod(dY2), crossprod(dY2, dY1)))  # dY1 = dY2 N' + u
+  v <- cbind(lagm(d2Y, 1)[rows, , drop = FALSE], dY1 - dY2 %*% t(N_hat))
+  dW <- cbind(lagm(d2Y, 1)[rows, , drop = FALSE], dY1)
 
-  # Construct v_t = Delta w_t where w_t = (Delta Y_{t-1}', Y_{t-1}')'
-  # We need the innovations in the I(1) and I(2) regressors
-
-  # For the FM correction, we need:
-  # 1. Omega_ev: long-run covariance between e_t and v_t
-  # 2. Omega_vv: long-run variance of v_t
-  # 3. Delta_vdw: one-sided long-run covariance
-
-  # v_t approximates the martingale difference driving the regressors
-  # For Y ~ I(d), we use Delta^{d+1} Y as proxy for innovations
-
-  # Use residuals from auxiliary regressions as v_t proxy
-  v <- e_ols  # Simplified: use equation residuals
-
-  # Estimate bandwidth if automatic
   if (bandwidth < 0) {
-    bandwidth <- select_bandwidth_andrews(e_ols, kernel)
+    bandwidth <- select_bandwidth_andrews(v, kernel)
   }
 
-  # Long-run variance of v
-  lrv_vv <- estimate_lrv(v, kernel, bandwidth)
-  Omega_vv <- lrv_vv$Omega
+  Omega_ev <- estimate_cross_lrv(e_ols, v, kernel, bandwidth)
+  Omega_vv <- estimate_cross_lrv(v, v, kernel, bandwidth)
+  Omega_vv <- (Omega_vv + t(Omega_vv)) / 2
+  Delta_vdw <- estimate_onesided_lrv(v, dW, kernel, bandwidth)
 
-  # Long-run covariance between e and v
-  Omega_ev <- estimate_lrv(e_ols, kernel, bandwidth)$Omega
-
-  # One-sided long-run covariance for FM correction
-  Delta_vdw <- estimate_onesided_lrv(e_ols, v, kernel, bandwidth)
-
-  # =========================================================================
-  # FM+ Correction
-  # =========================================================================
-
-  # The FM+ estimator corrects for endogeneity bias:
-  # F+ = F_ols - (Delta' * Z'Z^{-1})'
-
-  # Correction term for second-order bias
-  Delta_plus <- matrix(0, n, n_regs)
-
-  # Apply correction primarily to the I(1) and I(2) level regressors
-  # The correction is: (Omega_ev %*% Omega_vv^{-1} %*% Delta_vdw')
-  if (n_pi1 + n_pi2 > 0) {
-    Omega_vv_inv <- tryCatch(
-      solve(Omega_vv),
-      error = function(e) MASS::ginv(Omega_vv)
-    )
-
-    bias_correction <- Omega_ev %*% Omega_vv_inv %*% t(Delta_vdw)
-
-    # Apply to Pi1 and Pi2 columns
-    start_pi1 <- n_gamma + 1
-    end_pi2 <- n_regs
-
-    # Distribute correction across level regressors
-    for (j in start_pi1:end_pi2) {
-      Delta_plus[, j] <- rowMeans(bias_correction)
-    }
-  }
-
-  # FM+ coefficients
-  F_plus <- F_ols - t(Delta_plus %*% ZtZ_inv)
+  # The limit of Omega_vv is singular in the stationary direction (Chang,
+  # 2000, Remark (e)); a generalised inverse is used if it is singular
+  Omega_vv_inv <- tryCatch(solve(Omega_vv), error = function(e) MASS::ginv(Omega_vv))
+  B <- Omega_ev %*% Omega_vv_inv                     # (n x 2n)
 
   # =========================================================================
-  # Standard Errors
+  # RBFM-VAR correction (equations 12 and 13)
   # =========================================================================
-
-  # Var(vec(F+')) = Sigma_e (x) (Z'Z)^{-1}
-  # SE for (i,j) element = sqrt(Sigma_e[i,i] * ZtZ_inv[j,j])
-  SE_mat <- matrix(0, n, n_regs)
-  for (i in 1:n) {
-    for (j in 1:n_regs) {
-      SE_mat[i, j] <- sqrt(abs(Sigma_e[i, i] * ZtZ_inv[j, j]))
-    }
-  }
+  Y_plus <- y_dep - v %*% t(B)                       # rows: y_t^+'
+  Delta_plus <- B %*% Delta_vdw                      # (n x 2n)
+  YW <- t(Y_plus) %*% W + T_eff * Delta_plus
+  YX <- if (n_gamma > 0) cbind(t(y_dep) %*% Zs, YW) else YW
+  F_plus <- t(YX %*% ZtZ_inv)                        # (n_regs x n)
 
   # =========================================================================
-  # Extract Pi1, Pi2, Gamma matrices
+  # Standard errors: Sigma_e (x) (X'X)^{-1} (equation 20)
   # =========================================================================
+  SE_mat <- sqrt(outer(diag(Sigma_e), diag(ZtZ_inv)))
 
-  # Transpose F matrices to get coefficient form
   F_ols_t <- t(F_ols)
   F_plus_t <- t(F_plus)
 
-  # Gamma coefficients (if p >= 3)
   Gamma_ols <- NULL
   Gamma_plus <- NULL
   if (p >= 3) {
@@ -361,53 +312,32 @@ rbfmvar_estimate <- function(Y, p, kernel, bandwidth) {
     Gamma_plus <- F_plus_t[, 1:n_gamma, drop = FALSE]
   }
 
-  # Pi1 coefficients
   Pi1_start <- n_gamma + 1
   Pi1_end <- n_gamma + n
   Pi1_ols <- matrix(F_ols_t[, Pi1_start:Pi1_end], n, n)
   Pi1_plus <- matrix(F_plus_t[, Pi1_start:Pi1_end], n, n)
 
-  # Pi2 coefficients
   Pi2_start <- n_gamma + n + 1
   Pi2_end <- n_regs
   Pi2_ols <- matrix(F_ols_t[, Pi2_start:Pi2_end], n, n)
   Pi2_plus <- matrix(F_plus_t[, Pi2_start:Pi2_end], n, n)
 
-  # Add variable names
   rownames(Pi1_ols) <- colnames(Pi1_ols) <- colnames(Y)
   rownames(Pi1_plus) <- colnames(Pi1_plus) <- colnames(Y)
   rownames(Pi2_ols) <- colnames(Pi2_ols) <- colnames(Y)
   rownames(Pi2_plus) <- colnames(Pi2_plus) <- colnames(Y)
   rownames(Sigma_e) <- colnames(Sigma_e) <- colnames(Y)
 
-  # Fitted values and residuals
   fitted <- Z %*% F_plus
   residuals <- y_dep - fitted
   colnames(residuals) <- colnames(Y)
   colnames(fitted) <- colnames(Y)
 
-  # Build regressor names
-  regnames <- character(n_regs)
-  idx <- 1
-
+  regnames <- character(0)
   if (p >= 3) {
-    for (j in 1:(p - 2)) {
-      for (v in colnames(Y)) {
-        regnames[idx] <- paste0("L", j, "D2.", v)
-        idx <- idx + 1
-      }
-    }
+    for (j in 1:(p - 2)) regnames <- c(regnames, paste0("L", j, "D2.", colnames(Y)))
   }
-
-  for (v in colnames(Y)) {
-    regnames[idx] <- paste0("LD.", v)
-    idx <- idx + 1
-  }
-
-  for (v in colnames(Y)) {
-    regnames[idx] <- paste0("L.", v)
-    idx <- idx + 1
-  }
+  regnames <- c(regnames, paste0("LD.", colnames(Y)), paste0("L.", colnames(Y)))
 
   colnames(F_ols) <- colnames(Y)
   rownames(F_ols) <- regnames
@@ -415,11 +345,13 @@ rbfmvar_estimate <- function(Y, p, kernel, bandwidth) {
   rownames(F_plus) <- regnames
   colnames(SE_mat) <- regnames
   rownames(SE_mat) <- colnames(Y)
+  dimnames(ZtZ_inv) <- list(regnames, regnames)
 
   list(
     F_ols = F_ols,
     F_plus = F_plus,
     SE_mat = SE_mat,
+    XtX_inv = ZtZ_inv,
     Pi1_ols = Pi1_ols,
     Pi1_plus = Pi1_plus,
     Pi2_ols = Pi2_ols,
@@ -430,6 +362,7 @@ rbfmvar_estimate <- function(Y, p, kernel, bandwidth) {
     Omega_ev = Omega_ev,
     Omega_vv = Omega_vv,
     Delta_vdw = Delta_vdw,
+    N_hat = N_hat,
     residuals = residuals,
     fitted = fitted,
     T_eff = T_eff,

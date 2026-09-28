@@ -60,7 +60,7 @@ estimate_lrv <- function(v, kernel = "bartlett", bandwidth = -1,
 
   # Compute autocovariances and weighted sum
   Omega <- matrix(0, n, n)
-  max_lag <- min(TT - 1, ceiling(bandwidth) + 1)
+  max_lag <- .kernel_max_lag(kernel, bandwidth, TT)
 
   for (j in 0:max_lag) {
     # Autocovariance at lag j
@@ -158,9 +158,48 @@ select_bandwidth_andrews <- function(v, kernel = "bartlett") {
   bw
 }
 
+#' Kernel Lag Truncation
+#'
+#' Bartlett and Parzen weights vanish beyond the bandwidth; the Quadratic
+#' Spectral kernel has unbounded support, so all lags are used.
+#' @keywords internal
+.kernel_max_lag <- function(kernel, bandwidth, TT) {
+  if (tolower(kernel) == "qs") TT - 1 else min(TT - 1, ceiling(bandwidth))
+}
+
+#' Estimate Two-Sided Long-Run Covariance
+#'
+#' @description \eqn{\hat\Omega_{ab} = \sum_{|j| < T} k(j/K)\hat\Gamma_{ab}(j)}
+#'   with \eqn{\hat\Gamma_{ab}(j) = T^{-1}\sum_t a_{t+j} b_t'}.
+#'
+#' @param a Matrix (T x n1).
+#' @param b Matrix (T x n2).
+#' @param kernel Character string specifying the kernel type.
+#' @param bandwidth Bandwidth parameter.
+#'
+#' @return Long-run covariance matrix (n1 x n2).
+#' @keywords internal
+estimate_cross_lrv <- function(a, b, kernel = "bartlett", bandwidth) {
+  a <- as.matrix(a)
+  b <- as.matrix(b)
+  TT <- nrow(a)
+  kern_fn <- get_kernel_function(kernel)
+  Omega <- crossprod(a, b) / TT
+  for (j in seq_len(.kernel_max_lag(kernel, bandwidth, TT))) {
+    w <- kern_fn(j / bandwidth)
+    if (w == 0) next
+    G_pos <- crossprod(a[(j + 1):TT, , drop = FALSE], b[1:(TT - j), , drop = FALSE]) / TT
+    G_neg <- crossprod(a[1:(TT - j), , drop = FALSE], b[(j + 1):TT, , drop = FALSE]) / TT
+    Omega <- Omega + w * (G_pos + G_neg)
+  }
+  Omega
+}
+
 #' Estimate One-Sided Long-Run Covariance
 #'
-#' @description Estimates the one-sided long-run covariance matrix.
+#' @description \eqn{\hat\Delta_{ev} = \sum_{j=0}^{T-1} k(j/K) T^{-1}
+#'   \sum_t e_{t+j} v_t'}, the kernel estimate of \eqn{\sum_{j \ge 0} E
+#'   e_j v_0'} (the convention of Chang, 2000, p. 909).
 #'
 #' @param e Matrix of residuals e (T x n1).
 #' @param v Matrix of residuals v (T x n2).
@@ -174,25 +213,13 @@ estimate_onesided_lrv <- function(e, v, kernel = "bartlett", bandwidth) {
   e <- as.matrix(e)
   v <- as.matrix(v)
   TT <- nrow(e)
-  n1 <- ncol(e)
-  n2 <- ncol(v)
-
   kern_fn <- get_kernel_function(kernel)
-  max_lag <- min(TT - 1, ceiling(bandwidth) + 1)
-
-  Delta <- matrix(0, n1, n2)
-
-  for (j in 0:max_lag) {
-    if (j == 0) {
-      Gamma_j <- crossprod(e, v) / TT
-    } else {
-      Gamma_j <- crossprod(e[(j + 1):TT, , drop = FALSE],
-                           v[1:(TT - j), , drop = FALSE]) / TT
-    }
-
+  Delta <- crossprod(e, v) / TT
+  for (j in seq_len(.kernel_max_lag(kernel, bandwidth, TT))) {
     w <- kern_fn(j / bandwidth)
-    Delta <- Delta + w * Gamma_j
+    if (w == 0) next
+    Delta <- Delta + w * crossprod(e[(j + 1):TT, , drop = FALSE],
+                                   v[1:(TT - j), , drop = FALSE]) / TT
   }
-
   Delta
 }

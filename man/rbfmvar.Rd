@@ -49,6 +49,9 @@ An object of class \code{"rbfmvar"} containing:
   \item{Sigma_e}{Residual covariance matrix.}
   \item{Omega_ev, Omega_vv}{Long-run variance components.}
   \item{Delta_vdw}{One-sided long-run covariance for FM correction.}
+  \item{N_hat}{OLS coefficient of \eqn{\Delta y_{t-1}} on \eqn{\Delta y_{t-2}} used in \eqn{\hat v_t}.}
+  \item{XtX_inv}{\eqn{(X'X)^{-1}} of the regressors, used by \code{granger_test}.}
+  \item{data}{The data matrix, used by \code{irf}, \code{forecast} and \code{ic_table}.}
   \item{residuals}{Matrix of residuals from FM+ estimation.}
   \item{fitted}{Matrix of fitted values.}
   \item{nobs}{Number of observations in original data.}
@@ -74,6 +77,13 @@ The RBFM-VAR model is specified as:
 \deqn{\Delta^2 y_t = \sum_{j=1}^{p-2} \Gamma_j \Delta^2 y_{t-j} + \Pi_1 \Delta y_{t-1} + \Pi_2 y_{t-1} + e_t}
 
 where \eqn{\Delta} is the difference operator and \eqn{\Delta^2 = \Delta \circ \Delta}.
+
+The coefficients are estimated by the RBFM-VAR procedure of Chang (2000,
+equations 10 to 13); see the internal function \code{rbfmvar_estimate}
+for the formulas. The automatic bandwidth applies Andrews (1991) to the
+series \eqn{\hat v_t}; the correction depends on the bandwidth in finite
+samples, and Chang (2000) does not state the kernel or bandwidth used in
+its simulations.
 
 The FM+ correction eliminates the second-order asymptotic bias that arises
 from the correlation between the regression errors and the innovations in

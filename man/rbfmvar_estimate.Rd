@@ -19,6 +19,28 @@ rbfmvar_estimate(Y, p, kernel, bandwidth)
 List of estimation results.
 }
 \description{
-Core RBFM-VAR Estimation
+Implements the RBFM-VAR estimator of Chang (2000), equations (10) to
+(13). The regression is written in the second-difference form of
+equation (2); since \eqn{y_t = \Delta^2 y_t + \Delta y_{t-1} + y_{t-1}},
+the dependent variables of (2) and (3) differ by a linear function of
+\eqn{w_t}, and the corrected estimates of the two forms differ only by
+the identity added to \eqn{\Pi_1} and \eqn{\Pi_2}.
+}
+\details{
+With \eqn{z_t = (\Delta^2 y_{t-1}', \dots, \Delta^2 y_{t-p+2}')'} and
+\eqn{w_t = (\Delta y_{t-1}', y_{t-1}')'},
+\deqn{\hat F^+ = (Y'Z, Y^{+\prime}W + T\hat\Delta^+)(X'X)^{-1},}
+\eqn{Y^{+\prime} = Y' - \hat\Omega_{\hat\varepsilon\hat v}
+\hat\Omega_{\hat v\hat v}^{-1}\hat V'} and \eqn{\hat\Delta^+ =
+\hat\Omega_{\hat\varepsilon\hat v}\hat\Omega_{\hat v\hat v}^{-1}
+\hat\Delta_{\hat v\Delta w}}, where \eqn{\hat\varepsilon_t} are the OLS
+residuals, \eqn{\hat v_t = (\Delta^2 y_{t-1}', \Delta y_{t-1}' - \hat
+N\Delta y_{t-2}')'} (equation 11) with \eqn{\hat N} the OLS coefficient of
+\eqn{\Delta y_{t-1}} on \eqn{\Delta y_{t-2}}, \eqn{\Delta w_t =
+(\Delta^2 y_{t-1}', \Delta y_{t-1}')'}, \eqn{\hat\Omega} are two-sided
+kernel long-run covariance estimates and \eqn{\hat\Delta_{\hat v\Delta
+w} = \sum_{j \ge 0} k(j/K) T^{-1}\sum_t \hat v_{t+j}\Delta w_t'} is the
+one-sided long-run covariance (Chang, 2000, p. 909:
+\eqn{\Delta = \sum_{j\ge0} E u_j u_0'}).
 }
 \keyword{internal}

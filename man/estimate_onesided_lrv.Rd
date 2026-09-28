@@ -19,6 +19,8 @@ estimate_onesided_lrv(e, v, kernel = "bartlett", bandwidth)
 One-sided long-run covariance matrix (n1 x n2).
 }
 \description{
-Estimates the one-sided long-run covariance matrix.
+\eqn{\hat\Delta_{ev} = \sum_{j=0}^{T-1} k(j/K) T^{-1}
+  \sum_t e_{t+j} v_t'}, the kernel estimate of \eqn{\sum_{j \ge 0} E
+  e_j v_0'} (the convention of Chang, 2000, p. 909).
 }
 \keyword{internal}

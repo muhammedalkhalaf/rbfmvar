@@ -4,12 +4,14 @@
 \alias{estimate_var_ols}
 \title{Simple VAR OLS Estimation}
 \usage{
-estimate_var_ols(data, p)
+estimate_var_ols(data, p, start = p + 1)
 }
 \arguments{
 \item{data}{Data matrix.}
 
 \item{p}{Lag order.}
+
+\item{start}{First row of the estimation sample (default \code{p + 1}).}
 }
 \value{
 List with residual covariance matrix.

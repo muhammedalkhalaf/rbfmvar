@@ -1,8 +1,10 @@
 #' @title Granger Non-Causality Test
 #'
 #' @description Tests for Granger non-causality in the RBFM-VAR framework using
-#'   a modified Wald statistic. The test is asymptotically chi-squared under
-#'   the null hypothesis, regardless of the integration order of the variables.
+#'   the modified Wald statistic of Chang (2000, eq. 20). Under the null its
+#'   limit distribution is a mixture of chi-square variates bounded above by
+#'   the chi-square distribution with q degrees of freedom (Theorem 2), so the
+#'   chi-square p-value is conservative.
 #'
 #' @param object An \code{rbfmvar} object from \code{\link{rbfmvar}}.
 #' @param cause Character string. Name of the causing variable.
@@ -111,23 +113,17 @@ granger_test <- function(object, cause, effect) {
   coefs <- F_plus[cause_regs, effect_idx]
   ses <- SE_mat[effect_idx, cause_regs]
 
-  # Build restriction matrix R: we test R * beta = 0
-  # For standard Granger test, R is identity selecting cause coefficients
+  # Modified Wald statistic W_F^+ of Chang (2000, eq. 20):
+  # Var(vec F^+) = Sigma_e (x) (X'X)^{-1}; for restrictions on one
+  # equation the covariance is Sigma_e[i, i] * (X'X)^{-1}[S, S]
   n_restrictions <- length(coefs)
-
-  # Compute Wald statistic
-  # W = beta' * (R * Var(beta) * R')^{-1} * beta
-
-  # Variance of selected coefficients
-  # From Var(vec(F+')) = Sigma_e (x) (Z'Z)^{-1}
-  # Diagonal elements give variances
-  var_coefs <- ses^2
-
-  # Handle potential zero or near-zero variances
-  var_coefs <- pmax(var_coefs, .Machine$double.eps)
-
-  # For diagonal covariance, Wald = sum(beta^2 / var(beta))
-  wald_stat <- sum(coefs^2 / var_coefs)
+  XtX_inv <- object$XtX_inv
+  if (is.null(XtX_inv)) {
+    stop("'object' lacks (X'X)^{-1}; re-estimate with rbfmvar() >= 2.1.0.")
+  }
+  V <- object$Sigma_e[effect_idx, effect_idx] *
+    XtX_inv[cause_regs, cause_regs, drop = FALSE]
+  wald_stat <- as.numeric(t(coefs) %*% solve(V, coefs))
 
   # P-value from chi-squared distribution
   df <- n_restrictions

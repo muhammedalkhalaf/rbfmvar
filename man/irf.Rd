@@ -46,8 +46,14 @@ shock in each of the structural innovations. When \code{ortho = TRUE},
 the structural shocks are identified using the Cholesky decomposition of
 the residual covariance matrix (recursive identification).
 
-Bootstrap confidence intervals are computed using the recursive-design
-bootstrap following Kilian (1998).
+The responses are those of the levels VAR implied by the RBFM-VAR
+coefficients (see the internal function \code{.rbfmvar_levels}). With
+\code{ortho = FALSE} the responses are to unit shocks in the reduced-form
+errors. Bootstrap intervals are percentile intervals from a
+recursive-design residual bootstrap: each replication rebuilds the sample
+from the estimated levels VAR, the observed initial values and resampled
+centred residuals, and re-estimates the RBFM-VAR with the same lag order,
+kernel and bandwidth. No bias correction is applied.
 }
 \examples{
 # Simulate VAR data
@@ -70,10 +76,6 @@ plot(ir_boot)
 
 }
 \references{
-Kilian, L. (1998). Small-Sample Confidence Intervals for Impulse Response
-Functions. \emph{Review of Economics and Statistics}, 80(2), 218-230.
-\doi{10.1162/003465398557465}
-
 Lutkepohl, H. (2005). \emph{New Introduction to Multiple Time Series Analysis}.
 Springer-Verlag. \doi{10.1007/978-3-540-27752-1}
 }

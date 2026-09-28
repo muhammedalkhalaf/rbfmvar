@@ -26,8 +26,10 @@ A list of class \code{"rbfmvar_granger"} containing:
 }
 \description{
 Tests for Granger non-causality in the RBFM-VAR framework using
-  a modified Wald statistic. The test is asymptotically chi-squared under
-  the null hypothesis, regardless of the integration order of the variables.
+  the modified Wald statistic of Chang (2000, eq. 20). Under the null its
+  limit distribution is a mixture of chi-square variates bounded above by
+  the chi-square distribution with q degrees of freedom (Theorem 2), so the
+  chi-square p-value is conservative.
 }
 \details{
 The Granger non-causality hypothesis is:

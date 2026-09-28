@@ -48,13 +48,15 @@ select_lags_ic <- function(data, max_lags, ic = "aic") {
 
   for (p in 1:max_lags) {
     # Check if we have enough observations
-    T_eff <- TT - p - 1
+    # Common estimation sample t = max_lags + 1, ..., T for every p, so
+    # that the criteria are comparable across lag orders
+    T_eff <- TT - max_lags
     if (T_eff < 10) break
 
     # Estimate VAR(p) via OLS (simple version)
     result <- tryCatch(
       {
-        estimate_var_ols(data, p)
+        estimate_var_ols(data, p, start = max_lags + 1)
       },
       error = function(e) NULL
     )
@@ -66,7 +68,7 @@ select_lags_ic <- function(data, max_lags, ic = "aic") {
     log_det_sigma <- log(det(Sigma_e))
 
     # Number of parameters per equation
-    k <- n * p + 1  # Assuming no constant, just lagged values
+    k <- n * p  # no deterministic terms, as in the RBFM-VAR
 
     # Information criteria
     aic_val <- log_det_sigma + 2 * k * n / T_eff
@@ -106,23 +108,24 @@ select_lags_ic <- function(data, max_lags, ic = "aic") {
 #'
 #' @param data Data matrix.
 #' @param p Lag order.
+#' @param start First row of the estimation sample (default \code{p + 1}).
 #'
 #' @return List with residual covariance matrix.
 #' @keywords internal
-estimate_var_ols <- function(data, p) {
+estimate_var_ols <- function(data, p, start = p + 1) {
   data <- as.matrix(data)
   TT <- nrow(data)
   n <- ncol(data)
 
-  T_eff <- TT - p
+  T_eff <- TT - start + 1
 
   # Build lagged matrix
-  Y <- data[(p + 1):TT, , drop = FALSE]
+  Y <- data[start:TT, , drop = FALSE]
   Z <- matrix(0, T_eff, n * p)
 
   for (j in 1:p) {
     cols <- ((j - 1) * n + 1):(j * n)
-    Z[, cols] <- data[(p + 1 - j):(TT - j), , drop = FALSE]
+    Z[, cols] <- data[(start - j):(TT - j), , drop = FALSE]
   }
 
   # OLS
@@ -171,11 +174,8 @@ ic_table <- function(object, max_lags = 8) {
     stop("'object' must be of class 'rbfmvar'.")
   }
 
-  # Get original data from object
-  # We need to reconstruct data from residuals and fitted values
-  # For now, use a simplified approach
-
-  message("IC table computation requires original data. ",
-          "Use select_lags_ic() directly with data matrix.")
-  invisible(NULL)
+  if (is.null(object$data)) {
+    stop("'object' does not contain the data; re-estimate with rbfmvar() >= 2.1.0.")
+  }
+  select_lags_ic(object$data, max_lags, ic = "aic")$ic_table
 }
